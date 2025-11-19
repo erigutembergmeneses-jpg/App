@@ -270,14 +270,15 @@
                 </button>
               </div>
             </div>
-
-            {/* Áudio embutido em base64 — 0.5s beep, sem CORS */}
-            <audio id="demo-audio" controls>
-              <source src=""https://ia803105.us.archive.org/24/items/gravando-4-vocals/Gravando%20%284%29%20%5Bvocals%5D.mp3" 
-                Seu navegador não suporta o elemento de áudio.
-            </audio>
-
-            <div className="footer">Dica: use 0.75x para compreender pausas e nuances.</div>
+<audio id="demo-audio" controls preload="metadata">
+  <source 
+    src="https://ia803105.us.archive.org/24/items/gravando-4-vocals/Gravando%20%284%29%20%5Bvocals%5D.mp3" 
+    type="audio/mpeg" 
+  />
+  Seu navegador não suporta o elemento de áudio.
+</audio>
+           
+           <div className="footer">Dica: use 0.75x para compreender pausas e nuances.</div>
           </div>
         );
       }
