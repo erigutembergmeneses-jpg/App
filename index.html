@@ -107,6 +107,12 @@
         }
       };
 
+      // Safe UUID
+      const newId = () => {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return 'id-' + Math.random().toString(36).slice(2) + Date.now();
+      };
+
       // Tabs
       function Tabs({ active, onChange }) {
         const items = [
@@ -143,7 +149,7 @@
         const save = () => {
           if (!emotion.trim()) { alert("Digite uma emoção."); return; }
           const entry = {
-            id: crypto.randomUUID(),
+            id: newId(),
             date: new Date().toISOString(),
             emotion,
             intensity,
@@ -250,11 +256,11 @@
             <div className="row">
               <div className="col">
                 <label>Velocidade</label>
-                <select value={speed} onChange={(e)=>setSpeed(Number(e.target.value))}>
-                  <option value={0.5}>0.5x (lenta)</option>
-                  <option value={0.75}>0.75x</option>
-                  <option value={1}>1x (normal)</option>
-                  <option value={1.25}>1.25x</option>
+                <select value={String(speed)} onChange={(e)=>setSpeed(Number(e.target.value))}>
+                  <option value="0.5">0.5x (lenta)</option>
+                  <option value="0.75">0.75x</option>
+                  <option value="1">1x (normal)</option>
+                  <option value="1.25">1.25x</option>
                 </select>
               </div>
               <div className="col">
@@ -265,7 +271,7 @@
               </div>
             </div>
 
-            <!-- Substitua por seu arquivo de áudio real -->
+            {/* Substitua por seu arquivo de áudio real */}
             <audio id="demo-audio" controls>
               <source src="https://www.w3schools.com/html/horse.ogg" type="audio/ogg" />
               <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg" />
