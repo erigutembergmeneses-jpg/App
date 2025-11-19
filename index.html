@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>App Justiça Restaurativa — Web</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --primary: #22c55e;
+        --primary-700: #15803d;
+        --border: #1f2937;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+        background: linear-gradient(180deg, #0b1020, #0f172a);
+        color: var(--text);
+      }
+      header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        backdrop-filter: saturate(120%) blur(6px);
+        background: rgba(15, 23, 42, 0.8);
+      }
+      header h1 { margin: 0; font-size: 18px; letter-spacing: 0.2px; }
+      .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+      .tabs {
+        display: flex; gap: 8px; margin: 16px 0 24px;
+        border-bottom: 1px solid var(--border); padding-bottom: 8px;
+      }
+      .tab {
+        padding: 8px 12px; border: 1px solid var(--border); border-bottom: none;
+        border-radius: 8px 8px 0 0; cursor: pointer; color: var(--muted);
+        background: #0b1222;
+      }
+      .tab.active { color: var(--text); background: #121a31; border-color: #263045; }
+      .card {
+        background: #0b1222; border: 1px solid #263045; border-radius: 12px;
+        padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; }
+      .col { flex: 1 1 300px; }
+      label { display: block; margin: 8px 0 6px; color: var(--muted); font-size: 14px; }
+      input, textarea, select {
+        width: 100%; padding: 10px 12px; border-radius: 8px;
+        border: 1px solid #263045; background: #0f1a33; color: var(--text);
+        outline: none;
+      }
+      textarea { min-height: 120px; }
+      button {
+        background: var(--primary); color: #04140c; border: none; padding: 10px 14px;
+        border-radius: 10px; font-weight: 600; cursor: pointer;
+      }
+      button.secondary {
+        background: transparent; color: var(--text); border: 1px solid #263045;
+      }
+      .meta { font-size: 12px; color: var(--muted); }
+      .meter-wrap {
+        height: 14px; background: #0f1a33; border: 1px solid #263045; border-radius: 10px;
+        overflow: hidden; margin: 10px 0 8px;
+      }
+      .meter {
+        height: 100%; background: linear-gradient(90deg,#22c55e,#4ade80);
+        width: 0%;
+        transition: width 300ms ease;
+      }
+      .plant-emoji { font-size: 42px; margin: 8px 0; }
+      .list { margin-top: 10px; }
+      .list-item {
+        padding: 8px 10px; border: 1px dashed #263045; border-radius: 8px;
+        margin-bottom: 8px; background: #0f1a33;
+      }
+      audio { width: 100%; margin-top: 12px; }
+      .footer { margin-top: 18px; font-size: 12px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>App Complementar — Justiça Restaurativa (Web)</h1>
+    </header>
+    <div id="root" class="container"></div>
+
+    <!-- React via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- App -->
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // Storage helpers
+      const store = {
+        get(key, fallback) {
+          try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+          catch { return fallback; }
+        },
+        set(key, val) {
+          try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+        }
+      };
+
+      // Tabs
+      function Tabs({ active, onChange }) {
+        const items = [
+          { key: "diario", label: "Diário" },
+          { key: "planta", label: "Planta" },
+          { key: "escuta", label: "Escuta" },
+        ];
+        return (
+          <div className="tabs">
+            {items.map(it => (
+              <div
+                key={it.key}
+                className={"tab " + (active === it.key ? "active" : "")}
+                onClick={() => onChange(it.key)}
+                role="button"
+                aria-label={"Ir para " + it.label}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onChange(it.key)}
+              >
+                {it.label}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      // Diario Screen
+      function DiarioScreen({ onSave }) {
+        const [emotion, setEmotion] = useState("");
+        const [intensity, setIntensity] = useState(5);
+        const [note, setNote] = useState("");
+        const [entries, setEntries] = useState(() => store.get("entries", []));
+
+        const save = () => {
+          if (!emotion.trim()) { alert("Digite uma emoção."); return; }
+          const entry = {
+            id: crypto.randomUUID(),
+            date: new Date().toISOString(),
+            emotion,
+            intensity,
+            note
+          };
+          const next = [entry, ...entries];
+          setEntries(next);
+          store.set("entries", next);
+          setEmotion(""); setIntensity(5); setNote("");
+          onSave?.(); // concede "gotas" para rega
+          alert("Registro salvo!");
+        };
+
+        return (
+          <div className="card">
+            <h2>Diário sensorial</h2>
+            <p className="meta">Registre sua emoção principal e uma nota breve. Salvar um registro concede água para a planta.</p>
+            <div className="row">
+              <div className="col">
+                <label>Emoção principal</label>
+                <input placeholder="ex.: serenidade, raiva, esperança" value={emotion} onChange={(e)=>setEmotion(e.target.value)} />
+              </div>
+              <div className="col">
+                <label>Intensidade (1–10)</label>
+                <input type="range" min="1" max="10" value={intensity} onChange={(e)=>setIntensity(Number(e.target.value))} />
+                <div className="meta">Atual: {intensity}</div>
+              </div>
+            </div>
+            <label>Notas</label>
+            <textarea placeholder="O que aconteceu? O que você precisa agora?" value={note} onChange={(e)=>setNote(e.target.value)} />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={save}>Salvar registro</button>
+              <button className="secondary" onClick={() => { setEmotion(""); setIntensity(5); setNote(""); }}>Limpar</button>
+            </div>
+
+            <div className="list">
+              <h3>Registros recentes</h3>
+              {entries.length === 0 && <div className="meta">Nenhum registro ainda.</div>}
+              {entries.map(e => (
+                <div className="list-item" key={e.id}>
+                  <strong>{new Date(e.date).toLocaleString()}</strong><br />
+                  Emoção: {e.emotion} · Intensidade: {e.intensity}<br />
+                  {e.note && <span className="meta">{e.note}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // Planta Screen
+      function PlantaScreen({ hydration, onWater, stage }) {
+        const stageLabel = {
+          seed: "Semente",
+          sprout: "Broto",
+          sapling: "Muda",
+          tree: "Árvore"
+        }[stage];
+
+        return (
+          <div className="card">
+            <h2>Planta virtual</h2>
+            <p className="meta">Registre emoções e conclua tarefas de escuta/empatia para regar sua planta.</p>
+            <div className="plant-emoji">
+              {stage === "seed" && "🌱"}
+              {stage === "sprout" && "🌿"}
+              {stage === "sapling" && "🪴"}
+              {stage === "tree" && "🌳"}
+            </div>
+            <div className="meta">Estágio: {stageLabel}</div>
+            <div className="meter-wrap"><div className="meter" style={{ width: hydration + "%" }}></div></div>
+            <div className="meta">Hidratação: {hydration}%</div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={onWater}>Regar planta</button>
+              <button className="secondary" onClick={() => alert("Regras: cada registro/escuta concede 10% de hidratação.")}>Ver regras</button>
+            </div>
+            {hydration === 100 && <div className="meta" style={{ marginTop: 10 }}>Parabéns! Sua planta está totalmente crescida.</div>}
+          </div>
+        );
+      }
+
+      // Escuta Screen
+      function EscutaScreen({ onCompleted }) {
+        const [speed, setSpeed] = useState(1);
+        const [completed, setCompleted] = useState(false);
+
+        useEffect(() => {
+          const audio = document.getElementById("demo-audio");
+          if (audio) audio.playbackRate = speed;
+        }, [speed]);
+
+        const finish = () => {
+          if (!completed) {
+            setCompleted(true);
+            onCompleted?.();
+            alert("Sessão de escuta concluída. Você ganhou água para a planta.");
+          }
+        };
+
+        return (
+          <div className="card">
+            <h2>Escuta desacelerada</h2>
+            <p className="meta">Ouça o depoimento em velocidade reduzida e reflita: “O que essa pessoa precisa?”</p>
+            <div className="row">
+              <div className="col">
+                <label>Velocidade</label>
+                <select value={speed} onChange={(e)=>setSpeed(Number(e.target.value))}>
+                  <option value={0.5}>0.5x (lenta)</option>
+                  <option value={0.75}>0.75x</option>
+                  <option value={1}>1x (normal)</option>
+                  <option value={1.25}>1.25x</option>
+                </select>
+              </div>
+              <div className="col">
+                <label>Ação</label>
+                <button onClick={finish} disabled={completed} style={{ background: completed ? "#0f1a33" : undefined, color: completed ? "#9ca3af" : undefined }}>
+                  Marcar como concluída
+                </button>
+              </div>
+            </div>
+
+            <!-- Substitua por seu arquivo de áudio real -->
+            <audio id="demo-audio" controls>
+              <source src="https://www.w3schools.com/html/horse.ogg" type="audio/ogg" />
+              <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg" />
+              Seu navegador não suporta o elemento de áudio.
+            </audio>
+
+            <div className="footer">Dica: use 0.75x para compreender pausas e nuances do depoimento.</div>
+          </div>
+        );
+      }
+
+      // App Root
+      function App() {
+        const [tab, setTab] = useState(() => store.get("tab", "diario"));
+        const [hydration, setHydration] = useState(() => store.get("hydration", 0));
+
+        // Stage progression by hydration
+        const stage = hydration < 25 ? "seed" :
+                      hydration < 50 ? "sprout" :
+                      hydration < 90 ? "sapling" : "tree";
+
+        useEffect(() => { store.set("tab", tab); }, [tab]);
+        useEffect(() => { store.set("hydration", hydration); }, [hydration]);
+
+        const awardWater = (amount = 10) => {
+          setHydration(h => Math.min(h + amount, 100));
+        };
+
+        return (
+          <>
+            <Tabs active={tab} onChange={setTab} />
+            {tab === "diario" && <DiarioScreen onSave={() => awardWater(10)} />}
+            {tab === "planta" && <PlantaScreen hydration={hydration} stage={stage} onWater={() => awardWater(10)} />}
+            {tab === "escuta" && <EscutaScreen onCompleted={() => awardWater(10)} />}
+          </>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
