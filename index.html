@@ -92,7 +92,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- App -->
+    <!-- App com correção de execução -->
     <script type="text/babel">
       const { useState, useEffect } = React;
 
@@ -159,7 +159,7 @@
           setEntries(next);
           store.set("entries", next);
           setEmotion(""); setIntensity(5); setNote("");
-          onSave?.(); // concede "gotas" para rega
+          onSave?.();
           alert("Registro salvo!");
         };
 
@@ -271,14 +271,13 @@
               </div>
             </div>
 
-            {/* Substitua por seu arquivo de áudio real */}
+            {/* Áudio embutido em base64 — 0.5s beep, sem CORS */}
             <audio id="demo-audio" controls>
-              <source src="https://www.w3schools.com/html/horse.ogg" type="audio/ogg" />
-              <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mpeg" />
+              <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" type="audio/wav" />
               Seu navegador não suporta o elemento de áudio.
             </audio>
 
-            <div className="footer">Dica: use 0.75x para compreender pausas e nuances do depoimento.</div>
+            <div className="footer">Dica: use 0.75x para compreender pausas e nuances.</div>
           </div>
         );
       }
@@ -288,7 +287,6 @@
         const [tab, setTab] = useState(() => store.get("tab", "diario"));
         const [hydration, setHydration] = useState(() => store.get("hydration", 0));
 
-        // Stage progression by hydration
         const stage = hydration < 25 ? "seed" :
                       hydration < 50 ? "sprout" :
                       hydration < 90 ? "sapling" : "tree";
@@ -310,8 +308,36 @@
         );
       }
 
-      const root = ReactDOM.createRoot(document.getElementById("root"));
-      root.render(<App />);
+      // ✅ Correção: adia a renderização até que o Babel processe o JSX
+      window.initApp = () => {
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+      };
+    </script>
+
+    <!-- Garante execução após transpilação -->
+    <script>
+      // Executa após o DOM e scripts serem carregados
+      window.addEventListener('load', () => {
+        // @babel/standalone transpila scripts type="text/babel" durante o load
+        // Aguardamos um tick para garantir que `initApp` esteja definida
+        setTimeout(() => {
+          if (typeof window.initApp === 'function') {
+            window.initApp();
+          } else {
+            console.error("❌ Falha: initApp não definida. Verifique erros de transpilação no console.");
+            // Fallback visual
+            document.getElementById("root").innerHTML = `
+              <div class="card" style="text-align:center;color:#ef4444">
+                <h3>❌ Erro ao carregar o app</h3>
+                <p>Verifique se o script Babel foi carregado corretamente.</p>
+                <p>Abra o console (F12) para detalhes.</p>
+              </div>
+            `;
+          }
+        }, 100);
+      });
     </script>
   </body>
 </html>
+  
